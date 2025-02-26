@@ -20,13 +20,11 @@ pub fn run(args: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut ast = syn::parse_file(&content).unwrap();
     let items = &mut ast.items;
     let enum_ix = items.iter().position(|i| matches!(i, Enum(_))).unwrap();
-
-    let result = match &mut items[enum_ix] {
-        Enum(item) => Enum(transform_enum(item)),
-        _ => panic!("Not an enum"),
-    };
-
-    items[enum_ix] = result;
+    if let Enum(item) = &mut items[enum_ix] {
+        transform_enum(item)
+    } else {
+        unreachable!()
+    }
     let ts = ast.to_token_stream();
 
     let path = Path::new(file);
@@ -41,29 +39,20 @@ pub fn run(args: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::new()
 }
 
-fn transform_enum(item: &ItemEnum) -> ItemEnum {
-    let mut result = item.clone();
+fn transform_enum(item: &mut ItemEnum) {
     if item.ident == "Expr" {
-        result.variants = transform_variants(&item.variants)
+        transform_variants(&mut item.variants)
     }
-    result
 }
 
-fn transform_variants(variants: &Punctuated<Variant, Comma>) -> Punctuated<Variant, Comma> {
-    let mut result = variants.clone();
-    match variants.first() {
-        Some(variant) => {
-            if variant.ident == "Binary" {
-                let mut new_variant = TokenStream::new();
-                quote!(new_variant, {
-                  Binary(Vec<Rc<Expr>>, String)
-                });
-                result[0] = parse2(new_variant).unwrap()
-            }
-        }
-        None => (),
+fn transform_variants(variants: &mut Punctuated<Variant, Comma>) {
+    if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Binary") {
+        let mut new_variant = TokenStream::new();
+        quote!(new_variant, {
+          Binary(Vec<Rc<Expr>>, String)
+        });
+        variants[variant_ix] = parse2(new_variant).unwrap()
     }
-    result
 }
 
 // #[proc_macro]
