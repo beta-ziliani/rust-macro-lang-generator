@@ -82,17 +82,13 @@ mod linearization {
     fn generate_l1(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         let enum_ix = find_expr(items)?;
         if let Enum(item) = &mut items[enum_ix] {
-            transform_enum(item)
+            transform_variant(&mut item.variants)
         } else {
             unreachable!()
         }
     }
 
-    fn transform_enum(item: &mut ItemEnum) -> Result<(), Box<dyn std::error::Error>> {
-        transform_variants(&mut item.variants)
-    }
-
-    fn transform_variants(
+    fn transform_variant(
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Binary") {
@@ -118,7 +114,7 @@ mod resolve_operands {
 
         let enum_ix = crate::linearization::find_expr(items)?;
         if let Enum(item) = &mut items[enum_ix] {
-            transform_enum(item)
+            transform_variant(&mut item.variants)
         } else {
             unreachable!()
         }
@@ -136,11 +132,7 @@ mod resolve_operands {
         Ok(())
     }
 
-    fn transform_enum(item: &mut ItemEnum) -> Result<(), Box<dyn std::error::Error>> {
-        transform_variants(&mut item.variants)
-    }
-
-    fn transform_variants(
+    fn transform_variant(
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Binary") {
@@ -171,7 +163,7 @@ mod resolve_values {
         add_enum(items)?;
         let enum_ix = crate::linearization::find_expr(items)?;
         if let Enum(item) = &mut items[enum_ix] {
-            transform_enum(item)
+            transform_variant(&mut item.variants)
         } else {
             unreachable!()
         }
@@ -189,11 +181,7 @@ mod resolve_values {
         Ok(())
     }
 
-    fn transform_enum(item: &mut ItemEnum) -> Result<(), Box<dyn std::error::Error>> {
-        transform_variants(&mut item.variants)
-    }
-
-    fn transform_variants(
+    fn transform_variant(
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Value") {
