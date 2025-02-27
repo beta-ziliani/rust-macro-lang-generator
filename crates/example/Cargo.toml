@@ -2,6 +2,9 @@
 name = "rust-ldw"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
-[dependencies]
-transform = { workspace = true }
+[build-dependencies]
+syn = { workspace = true }
+proc-macro2 = { workspace = true }
+quote2 = { workspace = true }
