@@ -1,1 +1,1 @@
-use std :: rc :: Rc ; # [allow (dead_code)] pub enum Expr { Binary (Vec < Rc < Expr > > , Operand) , Value (String) , } pub enum Operand { Plus , }
+use std :: rc :: Rc ; # [allow (dead_code)] pub enum Expr { Binary (Vec < Rc < Expr > > , Operand) , Value (Value) , } pub enum Operand { Plus , } pub enum Value { Literal (i64) , }

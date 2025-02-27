@@ -162,12 +162,50 @@ mod resolve_operands {
     );
 }
 
-mod l3_stub {
+mod resolve_values {
+    use crate::DerivationError;
+
     generate_deps!();
 
-    fn generate_l3(_items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+    fn generate_l3(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+        add_enum(items)?;
+        let enum_ix = crate::linearization::find_expr(items)?;
+        if let Enum(item) = &mut items[enum_ix] {
+            transform_enum(item)
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn add_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+        let mut new_enum = TokenStream::new();
+        quote!(new_enum, {
+            pub enum Value {
+                Literal(i64),
+            }
+        });
+        let value_enum = parse2(new_enum)?;
+        items.push(value_enum);
         Ok(())
     }
+
+    fn transform_enum(item: &mut ItemEnum) -> Result<(), Box<dyn std::error::Error>> {
+        transform_variants(&mut item.variants)
+    }
+
+    fn transform_variants(
+        variants: &mut Punctuated<Variant, Comma>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Value") {
+            let mut new_variant = TokenStream::new();
+            quote!(new_variant, { Value(Value) });
+            variants[variant_ix] = parse2(new_variant)?;
+            Ok(())
+        } else {
+            Err(DerivationError::new("no Value variant").into())
+        }
+    }
+
     generate!(
         l3,
         "./src/generated/l2.rs",
@@ -179,6 +217,6 @@ mod l3_stub {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     linearization::l1()?;
     resolve_operands::l2()?;
-    l3_stub::l3()?;
+    resolve_values::l3()?;
     Ok(())
 }
