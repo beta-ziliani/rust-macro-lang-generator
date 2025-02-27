@@ -42,6 +42,14 @@ macro_rules! generate {
     };
 }
 
+macro_rules! wrapped_quote {
+    ($blk: tt) => {{
+        let mut new_variant = TokenStream::new();
+        quote!(new_variant, $blk);
+        parse2(new_variant)?
+    }};
+}
+
 #[derive(Debug)]
 struct DerivationError {
     problem: String,
@@ -96,11 +104,9 @@ mod linearization {
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Binary") {
-            let mut new_variant = TokenStream::new();
-            quote!(new_variant, {
+            variants[variant_ix] = wrapped_quote!({
               Binary(Vec<Rc<Expr>>, String)
-            });
-            variants[variant_ix] = parse2(new_variant)?
+            })
         }
         Ok(())
     }
@@ -136,11 +142,9 @@ mod resolve_operands {
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Binary") {
-            let mut new_variant = TokenStream::new();
-            quote!(new_variant, {
+            variants[variant_ix] = wrapped_quote!({
               Binary(Vec<Rc<Expr>>, Operand)
             });
-            variants[variant_ix] = parse2(new_variant)?;
             Ok(())
         } else {
             Err(DerivationError::new("no Binary variant").into())
@@ -182,9 +186,7 @@ mod resolve_values {
         variants: &mut Punctuated<Variant, Comma>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Value") {
-            let mut new_variant = TokenStream::new();
-            quote!(new_variant, { Value(Value) });
-            variants[variant_ix] = parse2(new_variant)?;
+            variants[variant_ix] = wrapped_quote!({ Value(Value) });
             Ok(())
         } else {
             Err(DerivationError::new("no Value variant").into())
