@@ -168,6 +168,7 @@ mod resolve_values {
     fn insert_value_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         let mut new_enum = TokenStream::new();
         quote!(new_enum, {
+            #[allow(dead_code)]
             pub enum Value {
                 Literal(i64),
             }
