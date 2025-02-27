@@ -110,7 +110,7 @@ mod resolve_operands {
     generate_deps!();
 
     fn generate_l2(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-        add_enum(items)?;
+        insert_operand_enum(items)?;
 
         let enum_ix = crate::linearization::find_expr(items)?;
         if let Enum(item) = &mut items[enum_ix] {
@@ -120,7 +120,7 @@ mod resolve_operands {
         }
     }
 
-    fn add_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+    fn insert_operand_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         let mut new_enum = TokenStream::new();
         quote!(new_enum, {
             pub enum Operand {
@@ -160,7 +160,7 @@ mod resolve_values {
     generate_deps!();
 
     fn generate_l3(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-        add_enum(items)?;
+        insert_value_enum(items)?;
         let enum_ix = crate::linearization::find_expr(items)?;
         if let Enum(item) = &mut items[enum_ix] {
             transform_variant(&mut item.variants)
@@ -169,7 +169,7 @@ mod resolve_values {
         }
     }
 
-    fn add_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+    fn insert_value_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         let mut new_enum = TokenStream::new();
         quote!(new_enum, {
             pub enum Value {
