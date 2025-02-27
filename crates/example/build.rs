@@ -1,17 +1,21 @@
-macro_rules! run {
-  ($file: tt) => {
-      use proc_macro2::TokenStream;
-      use quote2::{quote, ToTokens};
-      use std::fs::{self, File};
-      use std::io::Write;
-      use std::path::Path;
-      use syn::punctuated::Punctuated;
-      use syn::token::Comma;
-      use syn::Item::Enum;
-      use syn::{parse2, ItemEnum, Variant};
+macro_rules! generate_deps {
+    () => {
+        use proc_macro2::TokenStream;
+        use quote2::{quote, ToTokens};
+        use std::fs::{self, File};
+        use std::io::Write;
+        use syn::punctuated::Punctuated;
+        use syn::token::Comma;
+        use syn::Item::Enum;
+        use syn::{parse2, ItemEnum, Variant};
+    };
+}
 
-      pub(crate) fn generate() {
-          let content = fs::read_to_string($file).unwrap();
+macro_rules! generate {
+  ($func: ident, $from: tt, $to: tt) => {
+
+      pub(crate) fn $func() {
+          let content = fs::read_to_string($from).unwrap();
           let mut ast = syn::parse_file(&content).unwrap();
           let items = &mut ast.items;
           let enum_ix = items.iter().position(|i| matches!(i, Enum(_))).unwrap();
@@ -22,12 +26,7 @@ macro_rules! run {
           }
           let ts = ast.to_token_stream();
 
-          let path = Path::new($file);
-          let mut result_file_name = path.file_name().unwrap().as_encoded_bytes().to_vec();
-          result_file_name[1] = result_file_name[1] + 1;
-          let result_file_name = "./src/generated/".to_string()
-                  + std::str::from_utf8(&result_file_name).unwrap();
-          let mut file = File::create(result_file_name).unwrap();
+          let mut file = File::create($to).unwrap();
           file.write_all(ts.to_string().as_bytes()).unwrap();
       }
 
@@ -50,20 +49,23 @@ macro_rules! run {
 }
 
 mod l1_stub {
-    run!("/Users/beta/projects/nomic/tests/rust-ldw/crates/example/src/l0.rs");
+    generate_deps!();
+    generate!(l1, "./src/l0.rs", "./src/generated/l1.rs");
 }
 
 mod l2_stub {
-    run!("/Users/beta/projects/nomic/tests/rust-ldw/crates/example/src/generated/l1.rs");
+    generate_deps!();
+    generate!(l2, "./src/generated/l1.rs", "./src/generated/l2.rs");
 }
 
 mod l3_stub {
-    run!("/Users/beta/projects/nomic/tests/rust-ldw/crates/example/src/generated/l2.rs");
+    generate_deps!();
+    generate!(l3, "./src/generated/l2.rs", "./src/generated/l3.rs");
 }
 
 fn main() -> Result<(), String> {
-    l1_stub::generate();
-    l2_stub::generate();
-    l3_stub::generate();
+    l1_stub::l1();
+    l2_stub::l2();
+    l3_stub::l3();
     Ok(())
 }
