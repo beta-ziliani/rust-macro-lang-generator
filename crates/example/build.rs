@@ -65,27 +65,31 @@ mod linearization {
 
     generate_deps!();
 
-    pub fn find_expr(items: &Vec<Item>) -> Result<usize, Box<dyn Error>> {
-        items
+    pub fn find_enum<'a>(
+        items: &'a mut Vec<Item>,
+        name: &str,
+    ) -> Result<&'a mut ItemEnum, Box<dyn Error>> {
+        let enum_ix = items
             .iter()
             .position(|i| {
                 matches!(i, Enum(_))
                     && if let Enum(item) = i {
-                        item.ident == "Expr"
+                        item.ident == name
                     } else {
                         unreachable!()
                     }
             })
-            .ok_or(DerivationError::new("no Expr enum").into())
-    }
-
-    fn generate_l1(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-        let enum_ix = find_expr(items)?;
+            .ok_or::<Box<dyn Error>>(DerivationError::new("no Expr enum").into())?;
         if let Enum(item) = &mut items[enum_ix] {
-            transform_variant(&mut item.variants)
+            Ok(item)
         } else {
             unreachable!()
         }
+    }
+
+    fn generate_l1(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+        let enum_item = find_enum(items, "Expr")?;
+        transform_variant(&mut enum_item.variants)
     }
 
     fn transform_variant(
@@ -112,12 +116,8 @@ mod resolve_operands {
     fn generate_l2(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         insert_operand_enum(items)?;
 
-        let enum_ix = crate::linearization::find_expr(items)?;
-        if let Enum(item) = &mut items[enum_ix] {
-            transform_variant(&mut item.variants)
-        } else {
-            unreachable!()
-        }
+        let enum_item = crate::linearization::find_enum(items, "Expr")?;
+        transform_variant(&mut enum_item.variants)
     }
 
     fn insert_operand_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
@@ -161,12 +161,8 @@ mod resolve_values {
 
     fn generate_l3(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
         insert_value_enum(items)?;
-        let enum_ix = crate::linearization::find_expr(items)?;
-        if let Enum(item) = &mut items[enum_ix] {
-            transform_variant(&mut item.variants)
-        } else {
-            unreachable!()
-        }
+        let enum_item = crate::linearization::find_enum(items, "Expr")?;
+        transform_variant(&mut enum_item.variants)
     }
 
     fn insert_value_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
