@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Rc::new(l2::Expr::Value(1.to_string())),
             Rc::new(l2::Expr::Value(2.to_string())),
         ],
-        "+".to_string(),
+        l2::Operand::Plus,
     );
 
     Ok(())
