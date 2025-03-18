@@ -1,7 +1,7 @@
 use core::fmt;
 use proc_macro2::TokenStream;
 use quote::format_ident;
-use std::error::Error;
+use std::{error::Error, process::Command};
 use syn::{parse2, Item};
 
 macro_rules! generate_deps {
@@ -94,7 +94,7 @@ fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>, Box<d
     let visitor_item: Item = parse2(visitor).unwrap();
 
     let visitor_ident = format_ident!("{}", "visitor");
-    let accept_functions: Vec<_> = structs
+    let mut accept_functions: Vec<_> = structs
         .iter()
         .map(|s| {
             let ident = &s.ident;
@@ -104,6 +104,7 @@ fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>, Box<d
             let accept_fields = s.fields.iter().map(|field| {
                 let produce = match &field.ty {
                     syn::Type::Path(ty_path) => {
+                        // HACK: we should do the opposite and collect those that are in the list of structs
                         ty_path.path.segments.last().unwrap().ident != "String"
                     }
                     _ => true,
@@ -131,6 +132,41 @@ fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>, Box<d
             }
         })
         .collect();
+
+    let enums: Vec<_> = items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Enum(enum_item) => Some(enum_item),
+            _ => None,
+        })
+        .collect();
+    let mut enum_accept_functions: Vec<_> = enums
+        .iter()
+        .map(|s| {
+            let ident = &s.ident;
+            let ident = format_ident!("{}", ident);
+            let accept_variants = s.variants.iter().map(|variant| {
+                let variant_ident = &variant.ident;
+                quote::quote! {
+                  Self::#variant_ident(ref x) => x.accept(#visitor_ident),
+                }
+            });
+
+            quote::quote! {
+              impl crate::#module_name::#ident {
+                #[allow(unused)]
+                pub fn accept (&self, visitor: &mut dyn Visitor) {
+                  match self {
+                    #(#accept_variants)*
+                  }
+                }
+              }
+            }
+        })
+        .collect();
+
+    accept_functions.append(&mut enum_accept_functions);
+
     let mut accept_function_items: Vec<_> = accept_functions
         .iter()
         .map(|ts| parse2(ts.clone()).unwrap())
@@ -336,5 +372,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     linearization::visitors()?;
     //resolve_operands::l2()?;
     //resolve_values::l3()?;
+    let mut command = Command::new("cargo-fmt");
+    println!("cargo::warning={:?}", command.output());
     Ok(())
 }

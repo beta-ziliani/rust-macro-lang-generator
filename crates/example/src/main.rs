@@ -1,6 +1,6 @@
 mod generated;
 mod l0;
-use generated::{l0_visitors::Visitor, l1::Binary, *};
+use generated::*;
 use std::{error::Error, rc::Rc};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -85,14 +85,6 @@ where
     }
 }
 
-impl l0::Expr {
-    pub fn accept(&self, visitor: &mut dyn Visitor) {
-        match self {
-            l0::Expr::Value(value) => value.accept(visitor),
-            l0::Expr::Binary(binary) => binary.accept(visitor),
-        }
-    }
-}
 struct L0toL1 {
     stack: Vec<Rc<l1::Expr>>,
 }
@@ -107,7 +99,7 @@ impl L0toL1 {
     }
 }
 
-impl Visitor for L0toL1 {
+impl l0_visitors::Visitor for L0toL1 {
     fn leave_value(self: &mut Self, target: &l0::Value) {
         self.stack.push(Rc::new(l1::Expr::Value(
             l1::Value {
