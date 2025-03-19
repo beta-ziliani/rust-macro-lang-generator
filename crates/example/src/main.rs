@@ -92,7 +92,7 @@ impl L0toL1 {
 }
 
 impl l0_visitors::Visitor for L0toL1 {
-    fn leave_value(self: &mut Self, target: &l0::Value) {
+    fn leave_value(&mut self, target: &l0::Value) {
         self.stack.push(Rc::new(l1::Expr::Value(
             l1::Value {
                 value: target.value.clone(),
@@ -101,7 +101,7 @@ impl l0_visitors::Visitor for L0toL1 {
         )));
     }
 
-    fn leave_binary(self: &mut Self, target: &l0::Binary) {
+    fn leave_binary(&mut self, target: &l0::Binary) {
         let right = self.stack.pop().unwrap();
         let left = self.stack.pop().unwrap();
         let binary = l1::Expr::Binary(

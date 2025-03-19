@@ -51,7 +51,7 @@ macro_rules! generate {
     };
 }
 
-fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>> {
+fn generate_visitors(module: &str, items: &[Item]) -> Result<Vec<Item>> {
     let structs: Vec<_> = items
         .iter()
         .filter_map(|i| match i {
@@ -68,12 +68,12 @@ fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>> {
             let leave_ident = format_ident!("leave_{}", ident.to_string().to_lowercase());
             quote::quote! {
               #[allow(unused)]
-              fn #enter_ident (self: &mut Self, _target: &#ident) -> bool {
+              fn #enter_ident (&mut self, _target: &#ident) -> bool {
                 true
               }
 
               #[allow(unused)]
-              fn #leave_ident (self: &mut Self, _target: &#ident) {
+              fn #leave_ident (&mut self, _target: &#ident) {
               }
             }
         })
@@ -226,29 +226,7 @@ mod linearization {
 
     generate_deps!();
 
-    // pub fn find_enum<'a>(
-    //     items: &'a mut Vec<Item>,
-    //     name: &str,
-    // ) -> Result<&'a mut ItemEnum, Box<dyn Error>> {
-    //     let enum_ix = items
-    //         .iter()
-    //         .position(|i| {
-    //             matches!(i, Enum(_))
-    //                 && if let Enum(item) = i {
-    //                     item.ident == name
-    //                 } else {
-    //                     false
-    //                 }
-    //         })
-    //         .ok_or::<Box<dyn Error>>(DerivationError::new("no Expr enum").into())?;
-    //     if let Enum(item) = &mut items[enum_ix] {
-    //         Ok(item)
-    //     } else {
-    //         unreachable!()
-    //     }
-    // }
-
-    pub fn find_struct<'a>(items: &'a mut Vec<Item>, name: &str) -> Result<usize> {
+    pub fn find_struct(items: &mut [Item], name: &str) -> Result<usize> {
         let ix = items
             .iter()
             .position(|i| {
@@ -263,7 +241,7 @@ mod linearization {
         Ok(ix)
     }
 
-    fn generate_l1(items: &mut Vec<Item>) -> Result<()> {
+    fn generate_l1(items: &mut [Item]) -> Result<()> {
         let item_ix = find_struct(items, "Binary")?;
         let ts = quote! {
             #[allow(dead_code)]

@@ -3,17 +3,17 @@ use std::rc::Rc;
 #[allow(dead_code)]
 pub trait Visitor {
     #[allow(unused)]
-    fn enter_binary(self: &mut Self, _target: &Binary) -> bool {
+    fn enter_binary(&mut self, _target: &Binary) -> bool {
         true
     }
     #[allow(unused)]
-    fn leave_binary(self: &mut Self, _target: &Binary) {}
+    fn leave_binary(&mut self, _target: &Binary) {}
     #[allow(unused)]
-    fn enter_value(self: &mut Self, _target: &Value) -> bool {
+    fn enter_value(&mut self, _target: &Value) -> bool {
         true
     }
     #[allow(unused)]
-    fn leave_value(self: &mut Self, _target: &Value) {}
+    fn leave_value(&mut self, _target: &Value) {}
 }
 impl crate::l0::Binary {
     #[allow(unused)]
