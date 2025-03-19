@@ -32,26 +32,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     l0_expr.accept(&mut visitor);
     assert_eq!(&l1_expr, visitor.value());
 
-    // l2 adds an operand type (just the +)
-    // let _l2_expr = l2::Expr::Binary(l2::Binary {
-    //     exprs: vec![
-    //         Rc::new(l2::Expr::Value(l2::Value {
-    //             value: 1.to_string(),
-    //         })),
-    //         Rc::new(l2::Expr::Value(l2::Value {
-    //             value: 2.to_string(),
-    //         })),
-    //     ],
-    //     operand: l2::Operand::Plus,
-    // });
-    // // l3 replaces the string for values with a literal (i64)
-    // let _l3_expr = l3::Expr::Binary(
-    //     vec![
-    //         Rc::new(l3::Expr::Value(l3::Value::Literal(1))),
-    //         Rc::new(l3::Expr::Value(l3::Value::Literal(2))),
-    //     ],
-    //     l3::Operand::Plus,
-    // );
+    //l2 adds an operand type (just the +)
+    let _l2_expr = l2::Expr::Binary(Rc::new(l2::Binary {
+        exprs: vec![
+            Rc::new(l2::Expr::Value(Rc::new(l2::Value {
+                value: 1.to_string(),
+            }))),
+            Rc::new(l2::Expr::Value(Rc::new(l2::Value {
+                value: 2.to_string(),
+            }))),
+        ],
+        operand: l2::Operand::Plus,
+    }));
 
     Ok(())
 }

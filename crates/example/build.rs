@@ -4,6 +4,8 @@ use quote::format_ident;
 use std::{error::Error, process::Command};
 use syn::{parse2, Item};
 
+type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
 macro_rules! generate_deps {
     () => {
         #[allow(unused_imports)]
@@ -26,12 +28,15 @@ macro_rules! generate_deps {
         use syn::Item::Enum;
         #[allow(unused_imports)]
         use syn::{parse2, ItemEnum, Variant};
+
+        #[allow(dead_code)]
+        type Result<T> = std::result::Result<T, Box<dyn Error>>;
     };
 }
 
 macro_rules! generate {
     ($gen_func: ident, $from: tt, $to: tt, $func: ident) => {
-        pub(crate) fn $gen_func() -> Result<(), Box<dyn Error>> {
+        pub(crate) fn $gen_func() -> Result<()> {
             let content = fs::read_to_string($from)?;
             let mut ast = syn::parse_file(&content)?;
             let items = &mut ast.items;
@@ -46,7 +51,7 @@ macro_rules! generate {
     };
 }
 
-fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>, Box<dyn Error>> {
+fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>> {
     let structs: Vec<_> = items
         .iter()
         .filter_map(|i| match i {
@@ -178,7 +183,7 @@ fn generate_visitors(module: &str, items: &Vec<Item>) -> Result<Vec<Item>, Box<d
 
 macro_rules! visitors {
     ($gen_func: ident, $from_mod: tt, $from: tt, $to: tt) => {
-        pub(crate) fn $gen_func() -> Result<(), Box<dyn Error>> {
+        pub(crate) fn $gen_func() -> Result<()> {
             let content = fs::read_to_string($from)?;
             let mut ast = syn::parse_file(&content)?;
             ast.items = crate::generate_visitors($from_mod, &ast.items)?;
@@ -243,7 +248,7 @@ mod linearization {
     //     }
     // }
 
-    pub fn find_struct<'a>(items: &'a mut Vec<Item>, name: &str) -> Result<usize, Box<dyn Error>> {
+    pub fn find_struct<'a>(items: &'a mut Vec<Item>, name: &str) -> Result<usize> {
         let ix = items
             .iter()
             .position(|i| {
@@ -258,7 +263,7 @@ mod linearization {
         Ok(ix)
     }
 
-    fn generate_l1(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
+    fn generate_l1(items: &mut Vec<Item>) -> Result<()> {
         let item_ix = find_struct(items, "Binary")?;
         let ts = quote! {
             #[allow(dead_code)]
@@ -276,102 +281,79 @@ mod linearization {
     generate!(l1, "./src/l0.rs", "./src/generated/l1.rs", generate_l1);
 
     visitors!(
-        visitors,
+        visitors_l0,
         "l0",
         "./src/l0.rs",
         "./src/generated/l0_visitors.rs"
     );
+
+    // visitors!(
+    //     visitors_l1,
+    //     "l1",
+    //     "./src/generated/l1.rs",
+    //     "./src/generated/l1_visitors.rs"
+    // );
 }
 
-// mod resolve_operands {
-//     // use crate::DerivationError;
+mod resolve_operands {
+    generate_deps!();
 
-//     generate_deps!();
+    fn generate_l2(items: &mut Vec<Item>) -> Result<()> {
+        insert_operand_enum(items);
 
-//     fn generate_l2(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-//         insert_operand_enum(items)?;
+        let index = crate::linearization::find_struct(items, "Binary").unwrap();
+        items[index] = parse2(quote! {
+            #[allow(dead_code)]
+            #[derive(Debug, PartialEq, Eq)]
+            pub struct Binary {
+                pub exprs: Vec<Rc<Expr>>,
+                pub operand: Operand,
+            }
+        })
+        .unwrap();
+        Ok(())
+    }
 
-//         let index = crate::linearization::find_struct(items, "Binary")?;
-//         items[index] = quote_it!({
-//             #[allow(dead_code)]
-//             #[derive(Debug, PartialEq, Eq)]
-//             pub struct Binary {
-//                 pub exprs: Vec<Rc<Expr>>,
-//                 pub operand: Operand,
-//             }
-//         });
-//         Ok(())
-//     }
+    fn insert_operand_enum(items: &mut Vec<Item>) {
+        let operand_enum = parse2(quote! {
+            #[derive(Debug, PartialEq, Eq)]
+            pub enum Operand {
+                Plus,
+            }
+        })
+        .unwrap();
 
-//     fn insert_operand_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-//         let operand_enum = quote_it!({
-//             #[derive(Debug, PartialEq, Eq)]
-//             pub enum Operand {
-//                 Plus,
-//             }
-//         });
+        items.push(operand_enum)
+    }
 
-//         items.push(operand_enum);
-//         Ok(())
-//     }
+    generate!(
+        l2,
+        "./src/generated/l1.rs",
+        "./src/generated/l2.rs",
+        generate_l2
+    );
 
-//     generate!(
-//         l2,
-//         "./src/generated/l1.rs",
-//         "./src/generated/l2.rs",
-//         generate_l2
-//     );
-// }
+    // visitors!(
+    //     visitors,
+    //     "l2",
+    //     "./src/generated/l2.rs",
+    //     "./src/generated/l2_visitors.rs"
+    // );
+}
 
-// mod resolve_values {
-//     use crate::DerivationError;
-
-//     generate_deps!();
-
-//     fn generate_l3(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-//         insert_value_enum(items)?;
-//         let enum_item = crate::linearization::find_enum(items, "Expr")?;
-//         transform_variant(&mut enum_item.variants)
-//     }
-
-//     fn insert_value_enum(items: &mut Vec<Item>) -> Result<(), Box<dyn Error>> {
-//         let mut new_enum = TokenStream::new();
-//         quote!(new_enum, {
-//             #[allow(dead_code)]
-//             #[derive(Debug, PartialEq, Eq)]
-//             pub enum Value {
-//                 Literal(i64),
-//             }
-//         });
-//         let value_enum = parse2(new_enum)?;
-//         items.push(value_enum);
-//         Ok(())
-//     }
-
-//     fn transform_variant(
-//         variants: &mut Punctuated<Variant, Comma>,
-//     ) -> Result<(), Box<dyn std::error::Error>> {
-//         if let Some(variant_ix) = variants.iter().position(|v| v.ident == "Value") {
-//             variants[variant_ix] = quote_it!({ Value(Value) });
-//             Ok(())
-//         } else {
-//             Err(DerivationError::new("no Value variant").into())
-//         }
-//     }
-
-//     generate!(
-//         l3,
-//         "./src/generated/l2.rs",
-//         "./src/generated/l3.rs",
-//         generate_l3
-//     );
-// }
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
+    println!("cargo::rustc-env=RUST_BACKTRACE=1");
     linearization::l1()?;
-    linearization::visitors()?;
-    //resolve_operands::l2()?;
-    //resolve_values::l3()?;
+    linearization::visitors_l0()?;
+
+    // TODO: Visitors do not take into account Vec<_> yet
+    // linearization::visitors_l1()?;
+
+    resolve_operands::l2()?;
+
+    // TODO: ditto
+    // resolve_operands::visitors()?;
+
     let mut command = Command::new("cargo-fmt");
     println!("cargo::warning={:?}", command.output());
     Ok(())
